@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CareGuide AI 互動展示</title>
+<meta name="description" content="從病歷到個人化住院衛教單張：檢索增強私有大型語言模型系統的互動流程展示（虛構病人、預錄示範、內容附來源）。">
+<style>
+:root{
+  --bg:#f4f7f7; --surface:#ffffff; --surface-2:#eef3f3; --ink:#15211f; --muted:#5d6b69; --line:#d9e2e1;
+  --brand:#0f766e; --brand-ink:#ffffff; --brand-soft:#d5efec;
+  --keep:#1f7a4a; --keep-soft:#dcf1e5; --drop:#a3462f; --drop-soft:#f7e2dc;
+  --warn:#b45309; --warn-soft:#fdecc8; --flag:#b42318; --flag-soft:#fde4e1;
+  --hl:#fff1b8; --shadow:0 1px 2px rgba(0,0,0,.05),0 6px 20px rgba(15,60,55,.07);
+  --fs:1; color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1514; --surface:#17201f; --surface-2:#1e2a28; --ink:#e8efee; --muted:#9db0ad; --line:#2a3836;
+    --brand:#3cc2b4; --brand-ink:#04211e; --brand-soft:#173a36;
+    --keep:#5fd394; --keep-soft:#173426; --drop:#ff9a80; --drop-soft:#3d221b;
+    --warn:#f5b54a; --warn-soft:#3a2c10; --flag:#ff8b80; --flag-soft:#401c19;
+    --hl:#4a3f12; --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1514; --surface:#17201f; --surface-2:#1e2a28; --ink:#e8efee; --muted:#9db0ad; --line:#2a3836;
+  --brand:#3cc2b4; --brand-ink:#04211e; --brand-soft:#173a36;
+  --keep:#5fd394; --keep-soft:#173426; --drop:#ff9a80; --drop-soft:#3d221b;
+  --warn:#f5b54a; --warn-soft:#3a2c10; --flag:#ff8b80; --flag-soft:#401c19;
+  --hl:#4a3f12; --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;line-height:1.6}
+a{color:var(--brand)}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--brand);outline-offset:2px}
+.wrap{max-width:980px;margin:0 auto;padding:0 16px}
+.muted{color:var(--muted)} .small{font-size:13px}
+h1,h2,h3{line-height:1.3}
+h2{font-size:22px;margin:0 0 6px}
+section.block{padding:28px 0}
+.card{background:var(--surface);border-radius:16px;box-shadow:var(--shadow);padding:18px}
+.btn{min-height:44px;padding:0 16px;border-radius:12px;font-weight:600;background:var(--surface-2);border:1px solid var(--line);display:inline-flex;align-items:center;gap:6px}
+.btn.primary{background:var(--brand);color:var(--brand-ink);border-color:transparent}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--surface-2);border:1px solid var(--line);margin:2px 4px 2px 0;white-space:nowrap}
+.demo{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;padding:2px 8px;border-radius:99px;background:var(--warn-soft);color:var(--warn);vertical-align:middle}
+
+/* header */
+header.hero{background:linear-gradient(160deg,var(--brand) 0%,#0b4f4a 100%);color:#fff;padding:22px 0 30px}
+:root[data-theme="dark"] header.hero{background:linear-gradient(160deg,#12534d,#0a2c29)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) header.hero{background:linear-gradient(160deg,#12534d,#0a2c29)}}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.brand{font-weight:800;letter-spacing:.02em}
+.icon-btn{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.15);color:#fff;font-size:18px}
+.hero h1{font-size:30px;margin:22px 0 6px}
+.hero .sub{opacity:.85;font-size:14px;margin:0 0 14px;font-style:italic}
+.hero p{max-width:640px;margin:0 0 12px;opacity:.95}
+.notice{background:rgba(0,0,0,.18);border-radius:12px;padding:10px 14px;font-size:13px;max-width:720px}
+.notice b{color:#ffe7a3}
+
+/* patients */
+.patients{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:14px}
+.pt{text-align:left;background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow);transition:border-color .15s}
+.pt[aria-pressed="true"]{border-color:var(--brand);background:linear-gradient(0deg,var(--brand-soft),var(--surface) 70%)}
+.pt .nm{font-weight:800;font-size:17px}
+.pt .who{font-size:13px;color:var(--muted)}
+.pt dl{margin:8px 0 0;font-size:13px}
+.pt dt{color:var(--muted);font-size:12px;margin-top:6px}
+.pt dd{margin:0}
+
+/* stepper */
+.stepper{display:flex;gap:4px;margin:14px 0 4px;overflow-x:auto;padding-bottom:4px}
+.step{flex:1;min-width:84px;text-align:center;font-size:12px;padding:8px 4px;border-radius:10px;color:var(--muted);background:var(--surface);border:1px solid var(--line)}
+.step .n{display:block;font-weight:800;font-size:15px}
+.step.done{color:var(--brand);border-color:var(--brand-soft)}
+.step[aria-current="step"]{background:var(--brand);color:var(--brand-ink);border-color:transparent}
+.stage{margin-top:10px}
+.stage-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.stage-head h3{margin:0;font-size:19px}
+.what{background:var(--surface-2);border-radius:12px;padding:10px 14px;font-size:14px;margin:10px 0 14px}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;justify-content:space-between}
+.controls .grp{display:flex;gap:8px}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;font-size:14px}
+.kv dt{color:var(--muted)} .kv dd{margin:0}
+pre.json{background:var(--surface-2);border-radius:12px;padding:12px;font-size:12.5px;overflow:auto;margin:0;white-space:pre-wrap;word-break:break-word}
+.cands{display:grid;gap:8px}
+.cand{display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface)}
+.cand .t{font-weight:700}
+.cand .why{grid-column:1/-1;font-size:13px;color:var(--muted)}
+.cand.keep{border-color:var(--keep);background:var(--keep-soft)}
+.cand.drop{border-color:var(--drop);background:var(--drop-soft)}
+.cand.nosrc{border-color:var(--warn);background:var(--warn-soft)}
+.verdict{font-size:12px;font-weight:800;padding:2px 10px;border-radius:99px;background:var(--surface);white-space:nowrap}
+.cand.keep .verdict{color:var(--keep)} .cand.drop .verdict{color:var(--drop)} .cand.nosrc .verdict{color:var(--warn)}
+.score{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.score .bar{width:90px;height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.score .bar i{display:block;height:100%;background:var(--brand)}
+.fcheck{display:grid;gap:6px;font-size:14px}
+.fcheck div{display:grid;grid-template-columns:28px 1fr auto;gap:8px;align-items:start;padding:8px 10px;border-radius:10px;background:var(--surface-2)}
+.fcheck .bad{background:var(--flag-soft)}
+.fcheck .bad span:nth-child(2){text-decoration:line-through;opacity:.8}
+.fcheck .ok{color:var(--keep);font-weight:800}
+.fcheck .no{color:var(--flag);font-weight:800}
+mark.p{background:var(--hl);color:inherit;border-radius:4px;padding:0 2px}
+.legend{font-size:12px;color:var(--muted);margin:6px 0 10px}
+
+/* leaflet */
+.leaflet-tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.leaflet{background:#fffdf8;color:#1d1a15;border-radius:14px;padding:22px;border:1px solid #e8e0cf;font-size:calc(15px * var(--fs))}
+.leaflet h4{font-size:calc(21px * var(--fs));margin:0 0 4px;color:#0b5e57}
+.leaflet h5{font-size:calc(16px * var(--fs));margin:16px 0 4px;color:#0b5e57}
+.leaflet ul{margin:4px 0;padding-left:1.2em}
+.leaflet li{margin:4px 0}
+.leaflet sup a{color:#0b5e57;text-decoration:none;font-weight:700}
+.leaflet .who{background:#eef6f4;border-radius:10px;padding:10px 12px;font-size:calc(14px * var(--fs));margin:10px 0}
+.leaflet .src{font-size:calc(12px * var(--fs));color:#5b554a;border-top:1px solid #e8e0cf;margin-top:16px;padding-top:10px}
+.leaflet .disc{font-size:calc(12px * var(--fs));color:#7a4a12;background:#fbefd9;border-radius:8px;padding:8px 10px;margin-top:10px}
+.leaflet mark.p{background:#fff1b8}
+.leaflet + .leaflet{margin-top:14px}
+
+/* arch */
+.arch{display:grid;gap:10px}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+.node{flex:1 1 120px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;font-size:13px;position:relative}
+.node b{display:block;font-size:14px}
+.node.llm{border-color:var(--brand);background:var(--brand-soft)}
+.node.det{border-color:var(--warn);background:var(--warn-soft)}
+.legend2{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend2 span::before{content:"";display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px;border:1px solid var(--line)}
+.legend2 .l1::before{background:var(--brand-soft);border-color:var(--brand)}
+.legend2 .l2::before{background:var(--warn-soft);border-color:var(--warn)}
+
+/* red flag */
+.rf-row{display:flex;gap:8px}
+.rf-row input{flex:1;min-width:0;min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:0 14px;font:inherit}
+.examples{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.examples button{font-size:13px;padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:var(--surface-2)}
+.rf-out{border-radius:12px;padding:14px;margin-top:10px;font-size:14px}
+.rf-out.flag{background:var(--flag-soft);border:2px solid var(--flag)}
+.rf-out.flag b{color:var(--flag)}
+.rf-out.pass{background:var(--surface-2);border:1px solid var(--line)}
+footer{padding:28px 0 40px;font-size:13px;color:var(--muted)}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.two>*{min-width:0}
+@media (max-width:720px){ .two{grid-template-columns:minmax(0,1fr)} .hero h1{font-size:25px} .kv{grid-template-columns:90px 1fr} }
+
+@media print{
+  body{background:#fff}
+  body *{visibility:hidden}
+  #leafletOut, #leafletOut *{visibility:visible}
+  #leafletOut{position:absolute;left:0;top:0;width:100%}
+  .leaflet{border:0;break-inside:avoid-page}
+  .leaflet + .leaflet{break-before:page}
+}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <div class="topbar">
+      <span class="brand">CareGuide AI · 互動展示</span>
+      <button class="icon-btn" id="themeBtn" aria-label="切換深淺色">🌓</button>
+    </div>
+    <h1>從病歷，到看得懂的個人化衛教單張</h1>
+    <p class="sub">A Retrieval-Augmented Private Large Language Model for Precision Inpatient Health Education</p>
+    <p>住院病人拿到的衛教單張往往是通用版本。這個系統讀取病人的診斷與用藥，從衛教單張庫檢索相關內容，由 LLM 判斷相關性並生成個人化說明，最後用確定性規則檢查每一句都能對應到來源。</p>
+    <div class="notice">
+      <b>這是展示頁面：</b>病人資料全部<b>虛構</b>；靜態網頁<b>不會即時呼叫 AI</b>，每一步都是預先錄好的示範結果；衛教句子取自 MedlinePlus（美國國家醫學圖書館）並逐句標註來源。內容僅供研究展示，<b>非醫療建議</b>。
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="block" id="pick">
+    <h2>① 選一位示範病人</h2>
+    <p class="muted small" style="margin:0">三位病人皆為虛構，用來呈現不同的診斷組合。</p>
+    <div class="patients" id="patients"></div>
+  </section>
+
+  <section class="block" id="pipeline" style="padding-top:0">
+    <h2>② 一步步看系統怎麼運作 <span class="demo">預錄示範</span></h2>
+    <nav class="stepper" id="stepper" aria-label="流程階段"></nav>
+    <div class="card stage" id="stage" aria-live="polite"></div>
+  </section>
+
+  <section class="block" id="safety" style="padding-top:0">
+    <div class="two">
+      <div class="card">
+        <h2>③ 紅旗警示：不交給 AI 的問題</h2>
+        <p class="small muted" style="margin-top:0">病人提問若含危急症狀，系統<b>不經過 LLM</b>，由確定性的規則直接攔下並提示就醫。這類安全功能不能只靠模型「應該會遵守」。</p>
+        <div class="rf-row">
+          <input id="rfInput" placeholder="模擬病人提問，例如：我現在胸痛怎麼辦？" aria-label="模擬病人提問">
+          <button class="btn primary" id="rfBtn">檢查</button>
+        </div>
+        <div class="examples" id="rfEx"></div>
+        <div id="rfOut"></div>
+        <p class="small muted">示範規則只比對少數關鍵字，用來說明機制，不是完整的臨床分流工具。</p>
+      </div>
+      <div class="card">
+        <h2>④ 系統架構</h2>
+        <div class="arch">
+          <div class="flow" id="flow"></div>
+          <div class="legend2"><span class="l1">LLM 負責（機率性）</span><span class="l2">確定性規則（可保證）</span><span>一般資料處理</span></div>
+          <p class="small muted" style="margin:0">設計原則：攸關安全的功能（紅旗警示、來源忠實度、繁體中文轉換）由確定性的工程層保證，而不是依賴 LLM 的服從度。原型以私有部署為前提，病歷不送往外部服務。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <p>原始程式：<a href="https://github.com/juliachou0530/A-Retrieval-Augmented-Private-Large-Language-Model-for-Precision-Inpatient-Health-Education">GitHub repository</a>（Streamlit 原型）。本頁為靜態展示，所有病人為虛構。</p>
+  <p>衛教內容來源：<a href="https://medlineplus.gov/heartfailure.html">MedlinePlus Heart Failure</a>（摘要由 NHLBI 提供）、<a href="https://medlineplus.gov/copd.html">MedlinePlus COPD</a>、<a href="https://medlineplus.gov/diabetestype2.html">MedlinePlus Diabetes Type 2</a>；中文為作者翻譯摘要。本頁不提供診斷或治療建議，如有身體不適請諮詢醫療人員。</p>
+  <p>作者：周佳儀 Chia-Yi Chou · 臺北醫學大學 醫學資訊研究所</p>
+</footer>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// ---------- Sources (traceable, public) ----------
+const SOURCES = {
+  hf:   {name:'MedlinePlus: Heart Failure（摘要由 NHLBI 提供）', url:'https://medlineplus.gov/heartfailure.html'},
+  copd: {name:'MedlinePlus: COPD', url:'https://medlineplus.gov/copd.html'},
+  dm:   {name:'MedlinePlus: Diabetes Type 2', url:'https://medlineplus.gov/diabetestype2.html'}
+};
+
+// ---------- Leaflet knowledge base (each sentence -> source) ----------
+// tags: used for personalization highlighting when the patient's chart has the same tag
+const LEAFLETS = {
+  hf: { title:'心衰竭照護', src:'hf', sections:[
+    {h:'什麼是心衰竭', items:[
+      {t:'心衰竭是指心臟無法打出足夠的含氧血液，來滿足身體的需要。'},
+      {t:'心衰竭不代表心臟已經停止，或即將停止跳動。'}]},
+    {h:'常見症狀', items:[
+      {t:'活動時（例如爬樓梯）感到呼吸急促。'},
+      {t:'即使休息過後，仍覺得疲倦或無力。'},
+      {t:'腳踝、小腿或腹部因積水而腫脹，體重增加。'},
+      {t:'也可能出現咳嗽、平躺時難以入睡等情形。'}]},
+    {h:'日常照護', items:[
+      {t:'服藥是大多數心衰竭治療計畫的核心部分。', tag:'hfmed'},
+      {t:'減少鈉（鹽）的攝取並限制飲水量，有助於控制體內積水。'},
+      {t:'依照醫療人員建議的程度進行身體活動。'},
+      {t:'戒菸並學習管理壓力。', tag:'smoker'}]},
+    {h:'需要特別留意', items:[
+      {t:'心衰竭可能突然惡化，請密切留意自己的症狀變化。'},
+      {t:'醫療人員可能會建議您參加心臟復健計畫。'}]}
+  ]},
+  copd: { title:'慢性阻塞性肺病（COPD）照護', src:'copd', sections:[
+    {h:'什麼是 COPD', items:[
+      {t:'COPD 是一群會讓呼吸變得困難、並隨時間惡化的肺部疾病，主要包括肺氣腫與慢性支氣管炎。'},
+      {t:'COPD 通常是因為長期接觸會傷害肺部與呼吸道的刺激物所造成；在美國，香菸是主要原因。'}]},
+    {h:'常見症狀', items:[
+      {t:'初期可能沒有症狀，或只有輕微症狀。'},
+      {t:'常見症狀包括經常咳嗽、喘鳴聲、活動時呼吸急促、胸悶與疲倦。'}]},
+    {h:'治療與日常照護', items:[
+      {t:'戒菸是治療 COPD 最重要的一步。', tag:'smoker'},
+      {t:'支氣管擴張劑可放鬆呼吸道周圍的肌肉，通常以吸入劑的方式使用。', tag:'inhaler'},
+      {t:'肺部復健是包含運動、疾病管理訓練與諮詢的計畫，可幫助有慢性呼吸問題的人。'},
+      {t:'若 COPD 嚴重且血中氧氣濃度低，醫療人員可能會使用氧氣治療。', tag:'oxygen'},
+      {t:'盡量避免二手菸、空氣污染、化學煙霧與粉塵等肺部刺激物。'},
+      {t:'可詢問醫療人員是否接種流感疫苗與肺炎鏈球菌疫苗。'}]},
+    {h:'何時聯絡醫療人員', items:[
+      {t:'若症狀變嚴重，或出現發燒等感染徵象，請聯絡醫療人員。'}]}
+  ]},
+  dm: { title:'第 2 型糖尿病照護', src:'dm', sections:[
+    {h:'什麼是第 2 型糖尿病', items:[
+      {t:'第 2 型糖尿病是血糖濃度過高的疾病。'},
+      {t:'身體製造的胰島素不足，或無法有效利用胰島素，使葡萄糖留在血液中，而無法進入細胞提供能量。'}]},
+    {h:'可能的症狀', items:[
+      {t:'許多第 2 型糖尿病患者完全沒有症狀。'},
+      {t:'可能出現口渴、頻尿、容易飢餓、疲倦、視力模糊、手腳麻或刺痛、傷口不易癒合等情形。'}]},
+    {h:'日常照護', items:[
+      {t:'健康的生活方式包括遵循健康飲食計畫與規律的身體活動。'},
+      {t:'需要在飲食、活動與糖尿病藥物之間取得平衡。'},
+      {t:'糖尿病藥物包括口服藥、胰島素與其他注射藥物。', tag:'dmmed'},
+      {t:'需要定期測量血糖，頻率由醫療人員決定。'},
+      {t:'血壓與膽固醇也應維持在醫療人員設定的目標附近。'}]}
+  ]}
+};
+
+// ---------- Library titles (demo excerpt of the leaflet KB) ----------
+const LIB = {
+  hf:'心衰竭照護', copd:'慢性阻塞性肺病（COPD）照護', dm:'第 2 型糖尿病照護',
+  htn:'高血壓照護', esrd:'末期腎臟疾病', asthma:'氣喘照護', gdm:'妊娠糖尿病', pna:'肺炎照護'
+};
+
+// ---------- Fictional patients + pre-recorded pipeline outputs ----------
+const PATIENTS = [
+  { id:'A', name:'示範病人 A', age:72, sex:'男', reason:'因下肢水腫、活動後喘入院',
+    dx:[{n:'心衰竭',c:'I50.9',primary:true},{n:'高血壓',c:'I10'}],
+    meds:['Furosemide（利尿劑）','Bisoprolol（乙型阻斷劑）','Sacubitril/Valsartan'],
+    smoking:'從未吸菸', tags:['hfmed'],
+    concepts:['心衰竭','高血壓','利尿劑','乙型阻斷劑','ARNI'],
+    cands:[
+      {id:'hf',score:.95,v:'keep',why:'主診斷為心衰竭，用藥與心衰竭治療一致。'},
+      {id:'htn',score:.78,v:'nosrc',why:'相關（次要診斷），但示範版單張庫沒有已附來源的內容 → 本示範不輸出（沒有來源就不生成）。'},
+      {id:'esrd',score:.31,v:'drop',why:'因「利尿劑」與腎臟相關詞被召回；病歷沒有腎臟病診斷 → 排除。'}],
+    drafts:[{t:'建議每天固定時間量體重並記錄。', src:'hf'}],
+    leaflets:['hf'] },
+  { id:'B', name:'示範病人 B', age:68, sex:'女', reason:'因咳嗽加劇、喘鳴入院',
+    dx:[{n:'慢性阻塞性肺病（COPD）',c:'J44.9',primary:true},{n:'第 2 型糖尿病',c:'E11.9'}],
+    meds:['Tiotropium 吸入劑（支氣管擴張劑）','Metformin（口服降血糖藥）'],
+    smoking:'已戒菸', tags:['inhaler','dmmed'],
+    concepts:['COPD','第2型糖尿病','吸入劑','支氣管擴張劑','口服降血糖藥'],
+    cands:[
+      {id:'copd',score:.94,v:'keep',why:'主診斷為 COPD，且使用吸入型支氣管擴張劑。'},
+      {id:'dm',score:.88,v:'keep',why:'共病第 2 型糖尿病，使用口服降血糖藥。'},
+      {id:'asthma',score:.42,v:'drop',why:'症狀詞（喘鳴、吸入劑）相似而被召回；病歷沒有氣喘診斷 → 排除。'},
+      {id:'gdm',score:.18,v:'drop',why:'因「糖尿病」被召回；與病人情況不符 → 排除。'}],
+    drafts:[{t:'喘的時候可以自行增加吸入劑的使用次數。', src:'copd'},{t:'空腹血糖應維持在固定的數值範圍內。', src:'dm'}],
+    leaflets:['copd','dm'] },
+  { id:'C', name:'示範病人 C', age:80, sex:'男', reason:'因呼吸急促加劇、血氧偏低入院',
+    dx:[{n:'COPD 急性惡化',c:'J44.1',primary:true},{n:'心衰竭',c:'I50.9'}],
+    meds:['吸入型支氣管擴張劑','氧氣治療','Furosemide（利尿劑）'],
+    smoking:'目前吸菸', tags:['inhaler','oxygen','smoker','hfmed'],
+    concepts:['COPD','急性惡化','心衰竭','吸入劑','氧氣治療','吸菸'],
+    cands:[
+      {id:'copd',score:.96,v:'keep',why:'主診斷為 COPD 急性惡化，使用吸入劑與氧氣。'},
+      {id:'hf',score:.86,v:'keep',why:'共病心衰竭，使用利尿劑。'},
+      {id:'pna',score:.47,v:'drop',why:'「呼吸急促、血氧低」與肺炎單張相似；病歷沒有肺炎診斷 → 排除。'},
+      {id:'esrd',score:.29,v:'drop',why:'因「利尿劑」被召回；病歷沒有腎臟病診斷 → 排除。'}],
+    drafts:[{t:'吸菸量減少一半就足以控制病情。', src:'copd'}],
+    leaflets:['copd','hf'] }
+];
+
+const STAGES = [
+  {t:'讀取病歷', what:'從病歷取得結構化資料：診斷、用藥與基本資料。原型以私有部署為前提，資料不離開院內。'},
+  {t:'擷取臨床概念', what:'把診斷碼與藥名轉成臨床概念標籤，作為後續檢索的查詢條件。'},
+  {t:'候選單張檢索', what:'用概念標籤從衛教單張庫找出候選。這一步重視「不要漏掉」，所以會混入看似相關、其實不適用的單張。'},
+  {t:'相關性評估', what:'由 LLM 逐張判斷候選單張是否真的適用這位病人，並說明理由。'},
+  {t:'個人化生成', what:'依病人的診斷與用藥組合單張內容；與病人病歷直接相關的句子會被標記出來。'},
+  {t:'忠實度檢核', what:'確定性規則逐句比對：每一句都必須能對應到單張庫中的來源句子；找不到依據的句子直接刪除。'},
+  {t:'輸出預覽', what:'產生最終的個人化衛教單張，可放大字體或列印成 PDF。'}
+];
+
+let pt = PATIENTS[0], step = 0, fs = 1, playT = null;
+
+// ---------- patient cards ----------
+function renderPatients(){
+  $('patients').innerHTML = PATIENTS.map(p=>`
+    <button class="pt" data-id="${p.id}" aria-pressed="${p===pt}">
+      <div class="nm">${esc(p.name)}</div>
+      <div class="who">${p.age} 歲 · ${p.sex} · ${esc(p.reason)}</div>
+      <dl><dt>診斷</dt><dd>${p.dx.map(d=>esc(d.n)).join('、')}</dd>
+      <dt>用藥</dt><dd>${p.meds.map(esc).join('、')}</dd></dl>
+    </button>`).join('');
+}
+$('patients').addEventListener('click', e=>{
+  const b = e.target.closest('.pt'); if(!b) return;
+  pt = PATIENTS.find(p=>p.id===b.dataset.id); step = 0; stopPlay();
+  renderPatients(); renderStage();
+  $('pipeline').scrollIntoView({behavior:'smooth', block:'start'});
+});
+
+// ---------- stepper ----------
+function renderStepper(){
+  $('stepper').innerHTML = STAGES.map((s,i)=>`<button class="step ${i<step?'done':''}" data-i="${i}" ${i===step?'aria-current="step"':''}><span class="n">${i+1}</span>${s.t}</button>`).join('');
+}
+$('stepper').addEventListener('click', e=>{ const b=e.target.closest('.step'); if(!b) return; stopPlay(); step=+b.dataset.i; renderStage(); });
+
+function hlItem(item){ return item.tag && pt.tags.includes(item.tag); }
+function itemsOf(id){ const L=LEAFLETS[id]; return L.sections.flatMap(s=>s.items.map(it=>({...it, src:L.src}))); }
+
+function stageBody(){
+  const p = pt;
+  switch(step){
+    case 0: return `<dl class="kv">
+        <dt>病人</dt><dd>${esc(p.name)}（虛構）· ${p.age} 歲 · ${p.sex}</dd>
+        <dt>入院原因</dt><dd>${esc(p.reason)}</dd>
+        <dt>診斷</dt><dd>${p.dx.map(d=>`<span class="tag">${esc(d.c)} ${esc(d.n)}${d.primary?'（主）':''}</span>`).join('')}</dd>
+        <dt>用藥</dt><dd>${p.meds.map(m=>`<span class="tag">${esc(m)}</span>`).join('')}</dd>
+        <dt>吸菸狀態</dt><dd>${esc(p.smoking)}</dd></dl>`;
+    case 1: return `<pre class="json">${esc(JSON.stringify({patient:p.id, concepts:p.concepts, personalization_tags:p.tags}, null, 2))}</pre>
+        <p class="small muted" style="margin:8px 0 0"><code>personalization_tags</code> 會在第 5 步用來標記與病人直接相關的句子。</p>`;
+    case 2: return `<p class="small muted" style="margin-top:0">從示範單張庫（${Object.keys(LIB).length} 份節錄）召回 ${p.cands.length} 份候選：</p>
+        <div class="cands">${p.cands.map(c=>`<div class="cand"><span class="t">${esc(LIB[c.id])}</span><span class="tag">召回</span></div>`).join('')}</div>`;
+    case 3: return `<div class="cands">${p.cands.map(c=>`
+        <div class="cand ${c.v}"><span class="t">${esc(LIB[c.id])}</span>
+          <span class="verdict">${c.v==='keep'?'✓ 保留':c.v==='drop'?'✕ 排除':'△ 無來源'}</span>
+          <span class="score">相關性 <span class="bar"><i style="width:${c.score*100}%"></i></span> ${c.score.toFixed(2)}</span>
+          <span class="why">${esc(c.why)}</span></div>`).join('')}</div>
+        <p class="small muted" style="margin:8px 0 0">分數為示範用的預錄數值。</p>`;
+    case 4: {
+      const hits = p.leaflets.flatMap(id=>itemsOf(id)).filter(hlItem).length;
+      return `<p class="legend"><mark class="p">黃色標記</mark> = 依這位病人的病歷（用藥、吸菸狀態）挑出的重點句，共 ${hits} 句。</p>
+        ${p.leaflets.map(id=>`<div style="margin-bottom:10px"><b>${esc(LEAFLETS[id].title)}</b><ul style="margin:4px 0;padding-left:1.2em">
+        ${itemsOf(id).map(it=>`<li>${hlItem(it)?`<mark class="p">${esc(it.t)}</mark>`:esc(it.t)}</li>`).join('')}</ul></div>`).join('')}
+        <p class="small muted">模型草稿中另有 ${p.drafts.length} 句，將在下一步檢核。</p>`;
+    }
+    case 5: {
+      const rows = p.leaflets.flatMap(id=>itemsOf(id).map(it=>({...it,ok:true})));
+      const bad = p.drafts.map(d=>({...d,ok:false}));
+      const all = [...rows.slice(0,4), ...bad, ...rows.slice(4)];
+      return `<p class="small muted" style="margin-top:0">共檢核 ${all.length} 句：${rows.length} 句對應到來源，${bad.length} 句找不到依據而被刪除。</p>
+        <div class="fcheck">${all.map(r=>`<div class="${r.ok?'':'bad'}"><span class="${r.ok?'ok':'no'}">${r.ok?'✓':'✕'}</span><span>${esc(r.t)}</span>
+        <span class="small muted">${r.ok?esc(SOURCES[r.src].name.split('（')[0].replace('MedlinePlus: ','')):'來源中無依據 → 刪除'}</span></div>`).join('')}</div>
+        <p class="small muted" style="margin:8px 0 0">刪除的句子是示範用的「模型草稿」，用來說明檢核機制；被刪除只代表單張庫的來源中找不到依據。</p>`;
+    }
+    case 6: return `<div class="leaflet-tools">
+        <button class="btn" id="fsBtn" aria-pressed="${fs>1}">${fs>1?'A− 一般字體':'A+ 放大字體 1.25×'}</button>
+        <button class="btn" id="printBtn">🖨 列印／存成 PDF</button></div>
+        <div id="leafletOut">${p.leaflets.map(renderLeaflet).join('')}</div>`;
+  }
+}
+
+function renderLeaflet(id){
+  const L = LEAFLETS[id], S = SOURCES[L.src];
+  let n = 0;
+  return `<article class="leaflet">
+    <h4>${esc(L.title)}</h4>
+    <div class="who">給 <b>${esc(pt.name)}</b>（虛構）的個人化衛教<br>
+      您的診斷：${pt.dx.map(d=>esc(d.n)).join('、')}<br>
+      您目前的用藥（依病歷）：${pt.meds.map(esc).join('、')}</div>
+    ${L.sections.map(s=>`<h5>${esc(s.h)}</h5><ul>${s.items.map(it=>{n++; const txt=esc(it.t); return `<li>${hlItem(it)?`<mark class="p">${txt}</mark>`:txt}<sup><a href="#src-${id}" title="${esc(S.name)}">[1]</a></sup></li>`;}).join('')}</ul>`).join('')}
+    <div class="src" id="src-${id}">來源 [1]：<a href="${S.url}" target="_blank" rel="noopener">${esc(S.name)}</a>（${S.url}）。中文為翻譯摘要，共 ${n} 句，皆經忠實度檢核。黃色標記為與您病歷相關的重點。</div>
+    <div class="disc">研究展示用途：病人為虛構，內容非醫療建議。實際照護請依您的醫療團隊指示；如有不適請立即告知醫護人員。</div>
+  </article>`;
+}
+
+function renderStage(){
+  renderStepper();
+  const s = STAGES[step];
+  $('stage').innerHTML = `
+    <div class="stage-head"><h3>第 ${step+1} 步｜${s.t}</h3><span class="tag">${esc(pt.name)}</span></div>
+    <div class="what">${s.what}</div>
+    ${stageBody()}
+    <div class="controls">
+      <div class="grp"><button class="btn" id="prevBtn" ${step===0?'disabled':''}>← 上一步</button>
+      <button class="btn primary" id="nextBtn" ${step===STAGES.length-1?'disabled':''}>下一步 →</button></div>
+      <button class="btn" id="playBtn">${playT?'⏸ 暫停':'▶ 自動播放'}</button>
+    </div>`;
+  $('prevBtn').onclick = ()=>{ stopPlay(); step--; renderStage(); };
+  $('nextBtn').onclick = ()=>{ stopPlay(); step++; renderStage(); };
+  $('playBtn').onclick = ()=>{ if(playT) stopPlay(); else startPlay(); renderStage(); };
+  if(step===6){
+    $('fsBtn').onclick = ()=>{ fs = fs>1?1:1.25; document.documentElement.style.setProperty('--fs', fs); renderStage(); };
+    $('printBtn').onclick = ()=>window.print();
+  }
+}
+function startPlay(){ if(step===STAGES.length-1) step=0; playT=setInterval(()=>{ if(step<STAGES.length-1){ step++; renderStage(); } if(step===STAGES.length-1) { stopPlay(); renderStage(); } }, 2600); }
+function stopPlay(){ if(playT){ clearInterval(playT); playT=null; } }
+
+// ---------- red flag (deterministic) ----------
+const RED = ['胸痛','胸口痛','喘不過氣','呼吸困難','無法呼吸','嘴唇發紫','意識不清','昏倒','暈倒','咳血','吐血','單側無力','說話不清楚','抽搐'];
+const EX = ['我現在胸痛怎麼辦？','我覺得喘不過氣','吸入劑要怎麼保存？','心衰竭可以運動嗎？','我爸爸剛剛昏倒了'];
+$('rfEx').innerHTML = EX.map(x=>`<button>${esc(x)}</button>`).join('');
+$('rfEx').addEventListener('click', e=>{ const b=e.target.closest('button'); if(!b) return; $('rfInput').value=b.textContent; checkRF(); });
+$('rfBtn').addEventListener('click', checkRF);
+$('rfInput').addEventListener('keydown', e=>{ if(e.key==='Enter') checkRF(); });
+function checkRF(){
+  const q = $('rfInput').value.trim();
+  if(!q){ $('rfOut').innerHTML=''; return; }
+  const hit = RED.filter(k=>q.includes(k));
+  $('rfOut').innerHTML = hit.length
+    ? `<div class="rf-out flag" role="alert"><b>⚠ 紅旗警示：偵測到「${hit.map(esc).join('、')}」</b><br>這個問題<b>不會</b>交給 AI 回答。請立即按呼叫鈴通知護理師；若不在醫院，請撥打 119。
+       <div class="small muted" style="margin-top:6px">處理路徑：關鍵字規則 → 直接升級給醫護人員（0 次 LLM 呼叫）</div></div>`
+    : `<div class="rf-out pass">✓ 未偵測到紅旗關鍵字 → 轉交 RAG＋LLM 從衛教單張庫回答。<div class="small muted" style="margin-top:6px">（展示頁不會真的呼叫模型。）</div></div>`;
+}
+
+// ---------- architecture ----------
+const FLOW = [
+  ['病歷資料','診斷、用藥',''],['概念擷取','代碼 → 概念',''],['單張檢索','衛教單張庫',''],
+  ['相關性評估','保留／排除','llm'],['個人化生成','依病歷組合','llm'],['忠實度檢核','逐句對應來源','det'],
+  ['紅旗規則','危急症狀攔截','det'],['繁中轉換','OpenCC 後處理','det'],['衛教單張','預覽／列印','']
+];
+$('flow').innerHTML = FLOW.map(f=>`<div class="node ${f[2]}"><b>${f[0]}</b>${f[1]}</div>`).join('');
+
+// ---------- theme ----------
+(function(){
+  let t=null; try{ t=localStorage.getItem('cg-theme'); }catch(e){}
+  if(t) document.documentElement.dataset.theme=t;
+  $('themeBtn').addEventListener('click', ()=>{
+    const cur = document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+    const nx = cur==='dark'?'light':'dark'; document.documentElement.dataset.theme=nx;
+    try{ localStorage.setItem('cg-theme', nx); }catch(e){}
+  });
+})();
+
+renderPatients(); renderStage();
+})();
+</script>
+</body>
+</html>
